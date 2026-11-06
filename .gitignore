@@ -1,0 +1,5 @@
+# plaintext catalogue: only the encrypted copy in docs/ is published
+/data/
+# the site password
+/.site-password
+node_modules/

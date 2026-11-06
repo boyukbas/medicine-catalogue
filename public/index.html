@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>İlaç Kataloğu</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body class="locked">
+  <header class="top">
+    <button id="menu" class="icon-btn" aria-label="Kataloğu göster" aria-controls="side" aria-expanded="false">☰</button>
+    <h1>İlaç Kataloğu</h1>
+    <span class="sub">Özlem · 2012</span>
+    <button id="lock" class="lock-btn" type="button" hidden>Kilitle</button>
+  </header>
+
+  <section id="gate" class="gate" hidden>
+    <form id="gateForm" class="gate-card" autocomplete="on">
+      <h2>Bu katalog parola ile korunuyor</h2>
+      <label for="pw">Parola</label>
+      <input id="pw" name="password" type="password" autocomplete="current-password" required>
+      <label class="remember"><input id="remember" type="checkbox"> Bu cihazda hatırla</label>
+      <button id="unlock" type="submit">Aç</button>
+      <p id="gateMsg" class="gate-msg" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <div class="layout">
+    <aside id="side" class="side" aria-label="Katalog">
+      <div class="tools">
+        <input id="filter" type="search" placeholder="Filtre: ilaç, etken madde, kullanım…" autocomplete="off" spellcheck="false" aria-label="Filtre">
+        <button id="collapse" type="button" title="Tümünü daralt">Tümünü daralt</button>
+      </div>
+      <p id="status" class="status" aria-live="polite">Yükleniyor…</p>
+      <nav id="tree" class="tree" role="tree" aria-label="İlaç Kataloğu"></nav>
+    </aside>
+    <main class="main">
+      <div id="tabs" class="tabs" role="tablist" aria-label="Açık ilaçlar"></div>
+      <div id="panels" class="panels">
+        <section id="welcome" class="welcome">
+          <h2>Hoş geldiniz</h2>
+          <p>Soldaki katalogdan bir kategori açın ya da filtreye bir ilaç adı, etken madde veya kullanım alanı yazın.</p>
+          <p class="muted">Katalogda <strong id="medCount">…</strong> ilaç, <strong id="catCount">…</strong> kategori var. İçerik 2012'de derlendi ve İngilizcedir; güncel tıbbi bilgi yerine geçmez.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
