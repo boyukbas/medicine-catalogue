@@ -48,6 +48,7 @@ Steps:
 1. **Read the source files:** `.venv\Scripts\python tools\sources.py` turns them into JSON.
 2. **Map ingredient names:** German and UK names are mapped to INN + ATC code in `data/work/map-*.json`. This was done once with an AI model and can be corrected by hand.
 3. **Write the short patient summaries:** these are in `data/work/summaries/*.json` (TR/EN/DE: what it's for, how it's used, common side effects, the key warning, and prescription status in Germany). They were written with AI, and the site says so. `tools/build_catalogue.py` lists the ingredients that still need one in `data/work/summaries-todo.json`.
+3a. **Apply review corrections:** a second AI model reviewed the summaries of the commonly used medicines (those with German brands) for wrong facts and wrong prescription status. Its corrections are in `data/work/review/*.json` and are applied on top of the summaries during the build.
 4. **Build the catalogue:** `.venv\Scripts\python tools\build_catalogue.py` writes `data/catalogue.json`.
 5. **Build the site:** `node tools/build-site.js` encrypts everything into `docs/`.
 

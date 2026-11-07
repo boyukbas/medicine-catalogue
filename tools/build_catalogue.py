@@ -60,8 +60,9 @@ def ascii_slug(s, n=90):
 
 
 def norm_inn(s):
-    """'Amoxicillin / Clavulanic acid' -> 'amoxicillin + clavulanic acid' (sorted)."""
-    parts = re.split(r'\s*(?:\+|/|,| and )\s*', (s or '').strip().lower())
+    """'levodopa;carbidopa' (EMA) or 'Levodopa + Carbidopa' -> 'carbidopa + levodopa' (sorted). Only ';', ' + ' and
+    ' / ' separate ingredients: commas and bare slashes occur inside names ("pertussis (acellular, component)")."""
+    parts = re.split(r'\s*;\s*|\s+\+\s+|\s+/\s+', (s or '').strip().lower())
     parts = sorted({p.strip() for p in parts if p.strip()})
     return ' + '.join(parts)
 
@@ -101,6 +102,23 @@ def main():
     for f in sorted(glob.glob(D('work', 'summaries', 'batch-*.json'))):
         for s in load(f):
             summaries[norm_inn(s['key'])] = s
+    # Corrections from the review pass (data/work/review/*.json): only the fields that changed.
+    fixed = 0
+    for f in sorted(glob.glob(D('work', 'review', '*.json'))):
+        for c in load(f):
+            s = summaries.get(norm_inn(c.get('key', '')))
+            if not s:
+                continue
+            if c.get('rx') in ('rx', 'otc', 'both', 'hospital'):
+                s['rx'] = c['rx']
+            for lang_, name in (c.get('names') or {}).items():
+                s.setdefault('names', {})[lang_] = name
+            for lang_, fields in (c.get('fix') or {}).items():
+                if lang_ in ('tr', 'en', 'de') and isinstance(fields, dict):
+                    s.setdefault(lang_, {}).update({k: v for k, v in fields.items() if k in ('use', 'take', 'side', 'warn') and v})
+            fixed += 1
+    if fixed:
+        print(f'{fixed} summaries corrected by the review')
 
     ing = {}  # inn -> record
 
