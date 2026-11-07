@@ -52,7 +52,7 @@ function setLang(l) {
   for (const c of [...cats, ...ukcats]) c._k = fold(`${c.n.tr} ${c.n.en} ${c.n.de}`);
   renderTree();
   renderWelcome();
-  for (const [id, o] of open) { o.tab.querySelector('.tab-link').textContent = shortTitle(id); if (o.detail) renderPanel(id, o.detail); }
+  for (const [id, o] of open) { o.tab.querySelector('.tab-link').textContent = shortTitle(id); if (o.detail || id === LEARN) renderPanel(id, o.detail); }
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ const open = new Map(); // id -> {tab, panel, detail}
 let active = null;
 
 const ingName = (i) => pick(i.n) || i.inn;
-const itemTitle = (id) => { const x = byId.get(id); return x ? (x.kind === 'ing' ? ingName(x) : x.name) : ''; };
+const itemTitle = (id) => { if (id === 'learn') return T().learn; const x = byId.get(id); return x ? (x.kind === 'ing' ? ingName(x) : x.name) : ''; };
 const shortTitle = (id) => itemTitle(id).replace(/\s*\(.*\)$/, '');
 const titleCase = (s) => s.toLocaleLowerCase('de').replace(/(^|[\s\-/(+])(\p{L})/gu, (m, a, b) => a + b.toLocaleUpperCase('de'));
 
@@ -173,17 +173,31 @@ function groupNode(key, label, count, fill, forceOpen, nested) {
   return wrap;
 }
 
-// Returns the text of the first brand that matched, so the tree can show why an item matched.
+// Returns the text of the first brand (or the drug class) that matched, so the tree can show why an item matched.
 function match(item, terms) {
   if (terms.every((t) => item._k.includes(t))) {
     if (item.kind === 'ing' && !terms.every((t) => item._n.includes(t))) {
       const b = [...item.de, ...item.tr, ...item.ema].find((x) => terms.every((t) => fold(x).includes(t)));
-      return b ? titleCase(b) : '';
+      if (b) return titleCase(b);
+      const k = [item.k?.[lang === 'tr' ? 'tr' : 'de'], item.k?.de, item.k?.tr].find((x) => x && terms.every((t) => fold(x).includes(t)));
+      return k || '';
     }
     return '';
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Reader preferences kept in this browser: "commonly used only" and the study list (☆).
+const pref = {
+  get(k, d) { try { const v = localStorage.getItem(`medicine-catalogue-${k}`); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(`medicine-catalogue-${k}`, JSON.stringify(v)); } catch {} },
+};
+let commonOnly = pref.get('common-only', true);
+const stars = new Set(pref.get('stars', []));
+const saveStars = () => pref.set('stars', [...stars]);
+const details = new Map(); // id -> loaded detail (also used by the Learn tab)
+async function getDetail(id) { if (!details.has(id)) details.set(id, await loadItem(id)); return details.get(id); }
 
 function renderTree() {
   const t = T();
@@ -192,12 +206,11 @@ function renderTree() {
   let shown = 0;
   const sortIng = (a, b) => ingName(a).localeCompare(ingName(b), lang);
   for (const c of cats) {
-    let list = ings.filter((i) => i.cat === c.id);
+    // Browsing shows the commonly used ingredients by default; a search always looks through everything.
+    let list = ings.filter((i) => i.cat === c.id && (terms.length || !commonOnly || i.c));
     const hits = new Map();
-    if (terms.length) {
-      list = list.filter((i) => { const h = match(i, terms); if (h === null) return false; if (h) hits.set(i.id, h); return true; });
-      if (!list.length) continue;
-    }
+    if (terms.length) list = list.filter((i) => { const h = match(i, terms); if (h === null) return false; if (h) hits.set(i.id, h); return true; });
+    if (!list.length) continue;
     list.sort(sortIng);
     shown += list.length;
     frag.append(groupNode(`c:${c.id}`, pick(c.n), list.length, (ul) => { for (const i of list) ul.append(leaf(i, hits.get(i.id))); }, terms.length > 0 && list.length <= 40));
@@ -220,7 +233,7 @@ function renderTree() {
     }, terms.length > 0 && ukShown <= 40));
   }
   tree.replaceChildren(frag);
-  $('#status').textContent = terms.length ? (shown + ukShown ? t.found(shown + ukShown) : t.none) : t.summary(ings.length, data.counts.deBrands);
+  $('#status').textContent = terms.length ? (shown + ukShown ? t.found(shown + ukShown) : t.none) : t.summary(shown, data.counts.deBrands);
 }
 
 function markCurrent() {
@@ -286,12 +299,41 @@ function section(title, note, ...body) {
   return el('section', { class: 'block' }, el('h3', { text: title }), note ? el('p', { class: 'muted small', text: note }) : null, ...body);
 }
 
+const PRO_FIELDS = ['klasse', 'wirkung', 'ind', 'dos', 'pk', 'ki', 'ww', 'uaw', 'ss', 'beratung', 'abgabe'];
+let proLang = null; // 'de' or 'tr' once the reader switches inside the section; otherwise follows the site language
+
+function proSection(p) {
+  const t = T();
+  const wrap = el('section', { class: 'pro' });
+  const draw = () => {
+    const pl = proLang || (lang === 'tr' && p.tr ? 'tr' : 'de');
+    const body = p[pl] || p.de || p.tr;
+    const labels = window.I18N[pl === 'tr' ? 'tr' : 'de'].pf;
+    const dl = el('dl');
+    for (const k of PRO_FIELDS) if (body?.[k]) dl.append(el('dt', { text: labels[k], class: k === 'ww' ? 'key' : null }), el('dd', { text: body[k], lang: pl, class: k === 'ww' ? 'key' : null }));
+    const other = pl === 'de' ? 'tr' : 'de';
+    const sw = p[other] ? el('button', { type: 'button', class: 'pro-switch', text: other === 'de' ? t.proSwitchDe : t.proSwitchTr,
+      onclick: () => { proLang = other; draw(); } }) : null;
+    wrap.replaceChildren(...[
+      el('div', { class: 'pro-head' }, el('h3', { text: t.pro }), sw),
+      lang === 'en' && pl === 'de' && t.proShownDe ? el('p', { class: 'muted small', text: t.proShownDe }) : null,
+      dl,
+      el('p', { class: 'ai-note', text: t.proNote })].filter(Boolean));
+  };
+  draw();
+  return wrap;
+}
+
 function renderIngredient(item, d) {
   const t = T();
   const out = [];
   const names = [...new Set([item.n.de, item.n.en, item.n.tr, item.inn].filter(Boolean))].filter((n) => n !== ingName(item));
   out.push(el('p', { class: 'crumb', text: [pick(cats.find((c) => c.id === item.cat)?.n), item.atc && `${t.atc} ${item.atc}`].filter(Boolean).join(' · ') }));
-  out.push(el('h2', { class: 'title', text: ingName(item) }));
+  const starBtn = el('button', { type: 'button', class: 'star' });
+  const drawStar = () => { const on = stars.has(item.id); starBtn.textContent = on ? '★' : '☆'; starBtn.title = on ? t.unstar : t.star; starBtn.setAttribute('aria-label', starBtn.title); starBtn.setAttribute('aria-pressed', String(on)); };
+  starBtn.addEventListener('click', () => { stars.has(item.id) ? stars.delete(item.id) : stars.add(item.id); saveStars(); drawStar(); refreshLearn(); });
+  drawStar();
+  out.push(el('h2', { class: 'title' }, ingName(item), ' ', starBtn));
   if (names.length) out.push(el('p', { class: 'aka', text: names.join(' · ') }));
   if (d.rx && t.rx[d.rx]) out.push(el('span', { class: `badge ${d.rx}`, text: t.rx[d.rx] }));
 
@@ -305,12 +347,23 @@ function renderIngredient(item, d) {
   } else card.append(el('p', { class: 'muted', text: t.noSummary }));
   out.push(card);
 
+  // Pharmacist monograph (German + Turkish). English readers see the German text: it is the exam language.
+  if (d.p) out.push(proSection(d.p));
+
   if (d.de?.length) {
     const tbody = el('tbody');
-    for (const b of d.de) {
+    const LIMIT = 10;
+    for (const [n, b] of d.de.entries()) {
+      if (n === LIMIT && d.de.length > LIMIT + 2) {
+        const more = el('tr', { class: 'more-row' }, el('td', { colspan: '3' }, el('button', { type: 'button', class: 'pro-switch', text: t.showAllRows(d.de.length),
+          onclick: () => { for (const r of tbody.querySelectorAll('tr.extra')) r.hidden = false; more.remove(); } })));
+        tbody.append(more);
+      }
       const forms = [...new Set(b.rows.map((r) => [formName(r[0]), r[1]].filter(Boolean).join(' · ')))];
       const pzn = el('details', {}, el('summary', { text: `${b.rows.length} ${t.packs}` }), el('p', { class: 'pzn', text: b.rows.map((r) => `${r[3]} (${r[2]} ${formName(r[0])})`).join(' · ') }));
-      tbody.append(el('tr', {}, el('td', { class: 'brand', text: titleCase(b.b) }), el('td', { text: forms.join(', ') }), el('td', {}, pzn)));
+      const row = el('tr', {}, el('td', { class: 'brand', text: titleCase(b.b) }), el('td', { text: forms.join(', ') }), el('td', {}, pzn));
+      if (n >= LIMIT && d.de.length > LIMIT + 2) { row.classList.add('extra'); row.hidden = true; }
+      tbody.append(row);
     }
     out.push(section(t.deBrands, t.deNote, el('div', { class: 'scroll' }, el('table', { class: 'grid' },
       el('thead', {}, el('tr', {}, el('th', { text: '' }), el('th', { text: t.form }), el('th', { text: t.pzn }))), tbody))));
@@ -327,7 +380,10 @@ function renderIngredient(item, d) {
     out.push(section(t.ema, t.emaNote, ul));
   }
   if (d.tr?.length) {
-    out.push(section(t.trBrands, t.trNote, el('p', { class: 'brands', text: d.tr.map((b) => titleCase(b.b) + (b.h ? ` (${titleCase(b.h)})` : '')).join(' · ') })));
+    const fmt = (list) => list.map((b) => titleCase(b.b) + (b.h ? ` (${titleCase(b.h)})` : '')).join(' · ');
+    const first = d.tr.slice(0, 15), rest = d.tr.slice(15);
+    out.push(section(t.trBrands, t.trNote, el('p', { class: 'brands', text: fmt(first) }),
+      rest.length ? el('details', {}, el('summary', { text: t.more(rest.length) }), el('p', { class: 'brands', text: fmt(rest) })) : null));
   }
   if (item.uk?.length) {
     const ul = el('ul', { class: 'links' });
@@ -354,7 +410,84 @@ function renderUk(item, d) {
   ];
 }
 
+// ---------------------------------------------------------------------------
+// Learn tab: flashcards from the pharmacist notes, and the study list with the interactions between its medicines.
+const LEARN = 'learn';
+let cardScope = 'all', cardId = null, cardOpen = false;
+
+function proOf(d) {
+  const pl = proLang || (lang === 'tr' && d?.p?.tr ? 'tr' : 'de');
+  return { pl, body: d?.p?.[pl] || d?.p?.de || d?.p?.tr, labels: window.I18N[pl === 'tr' ? 'tr' : 'de'].pf };
+}
+
+async function drawCard(box) {
+  const t = T();
+  const pool = (cardScope === 'stars' ? ings.filter((i) => stars.has(i.id)) : ings.filter((i) => i.c)).filter((i) => i.p);
+  if (!pool.length) { box.replaceChildren(el('p', { class: 'muted', text: cardScope === 'stars' ? t.starsEmpty : t.noCards })); return; }
+  if (!cardId || !pool.some((i) => i.id === cardId)) cardId = pool[Math.floor(Math.random() * pool.length)].id;
+  const item = byId.get(cardId);
+  box.replaceChildren(el('p', { class: 'muted', text: t.loading }));
+  let d; try { d = await getDetail(cardId); } catch { box.replaceChildren(el('p', { class: 'error', text: t.itemFail })); return; }
+  const { pl, body, labels } = proOf(d);
+  const answer = el('dl', { class: 'card-answer' });
+  for (const k of ['klasse', 'wirkung', 'ind', 'ww', 'beratung', 'abgabe']) if (body?.[k]) answer.append(el('dt', { text: labels[k] }), el('dd', { text: body[k], lang: pl }));
+  answer.hidden = !cardOpen;
+  const reveal = el('button', { type: 'button', class: 'primary', text: t.showAnswer, onclick: () => { cardOpen = true; answer.hidden = false; reveal.hidden = true; } });
+  reveal.hidden = cardOpen;
+  const next = el('button', { type: 'button', text: t.next, onclick: () => { cardId = null; cardOpen = false; drawCard(box); } });
+  box.replaceChildren(
+    el('div', { class: 'card-q' }, el('a', { href: `#/i/${item.id}`, class: 'card-name', text: ingName(item) }),
+      el('span', { class: 'muted', text: item.de.slice(0, 3).map(titleCase).join(', ') })),
+    answer, el('div', { class: 'card-btns' }, reveal, next));
+}
+
+// Lines of A's interaction notes that name B (or B's ingredients), for every pair on the study list.
+function mutualInteractions(list) {
+  const out = [];
+  const termsOf = (i) => [...new Set([i.inn, i.n.de, i.n.en, i.n.tr].flatMap((n) => (n || '').split(/\s+\+\s+/)).map(fold).filter((x) => x.length >= 4))];
+  for (const a of list) {
+    const d = details.get(a.id); if (!d?.p) continue;
+    const { body } = proOf(d);
+    const segs = (body?.ww || '').split(/;\s*/);
+    for (const b of list) {
+      if (a === b) continue;
+      const hits = segs.filter((s) => termsOf(b).some((x) => fold(s).includes(x)));
+      if (hits.length) out.push([a, b, hits.join('; ')]);
+    }
+  }
+  return out;
+}
+
+async function renderLearn(panel) {
+  const t = T();
+  const box = el('div', { class: 'card' });
+  const scope = el('select', { 'aria-label': t.cards, onchange: (e) => { cardScope = e.target.value; cardId = null; cardOpen = false; drawCard(box); } },
+    el('option', { value: 'all', text: t.scopeAll }), el('option', { value: 'stars', text: t.scopeStars }));
+  scope.value = cardScope;
+  const list = ings.filter((i) => stars.has(i.id)).sort((a, b) => ingName(a).localeCompare(ingName(b), lang));
+  const starsBox = el('div');
+  panel.replaceChildren(
+    el('h2', { class: 'title', text: t.learn }),
+    el('section', { class: 'block' }, el('div', { class: 'pro-head' }, el('h3', { text: t.cards }), scope), el('p', { class: 'muted small', text: t.cardsHelp }), box),
+    el('section', { class: 'block' }, el('h3', { text: `${t.starsTitle} (${list.length})` }), starsBox));
+  drawCard(box);
+  if (!list.length) { starsBox.append(el('p', { class: 'muted', text: t.starsEmpty })); return; }
+  const ul = el('ul', { class: 'links' });
+  for (const i of list) ul.append(el('li', {}, el('a', { href: `#/i/${i.id}`, text: ingName(i) }), i.k?.[lang === 'tr' ? 'tr' : 'de'] ? el('span', { class: 'muted', text: ` · ${i.k[lang === 'tr' ? 'tr' : 'de']}` }) : null));
+  starsBox.append(ul);
+  if (list.length < 2) return;
+  const mbox = el('div', {}, el('p', { class: 'muted', text: t.loading }));
+  starsBox.append(el('h4', { text: t.mutual }), mbox);
+  await Promise.all(list.slice(0, 40).map((i) => getDetail(i.id).catch(() => null)));
+  const pairs = mutualInteractions(list.slice(0, 40));
+  const dl = el('dl', { class: 'mutual' });
+  for (const [a, b, text] of pairs) dl.append(el('dt', { text: `${ingName(a)} ↔ ${ingName(b)}` }), el('dd', { text }));
+  mbox.replaceChildren(pairs.length ? dl : el('p', { text: t.noMutual }), el('p', { class: 'ai-note', text: t.mutualNote }));
+}
+const refreshLearn = () => { const o = open.get(LEARN); if (o) renderLearn(o.panel); };
+
 function renderPanel(id, d) {
+  if (id === LEARN) { const o = open.get(LEARN); if (o) renderLearn(o.panel); return; }
   const o = open.get(id); const item = byId.get(id);
   if (!o || !item) return;
   o.panel.replaceChildren(...(item.kind === 'ing' ? renderIngredient(item, d) : renderUk(item, d)).filter(Boolean));
@@ -378,7 +511,7 @@ function activate(id) {
   open.get(id)?.tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-const hashFor = (id) => (byId.get(id)?.kind === 'ing' ? `#/i/${id}` : `#/medicine/${id}`);
+const hashFor = (id) => (id === LEARN ? '#/learn' : byId.get(id)?.kind === 'ing' ? `#/i/${id}` : `#/medicine/${id}`);
 
 function closeTab(id) {
   const o = open.get(id);
@@ -394,7 +527,7 @@ function closeTab(id) {
 }
 
 async function openItem(id) {
-  if (!ID_RE.test(id) || !byId.has(id)) return;
+  if (!ID_RE.test(id) || (!byId.has(id) && id !== LEARN)) return;
   if (open.has(id)) return activate(id);
   if (open.size >= MAX_TABS) closeTab([...open.keys()].find((k) => k !== active));
   const tab = el('div', { class: 'tab', role: 'tab', id: `tab-${id}`, 'aria-controls': `panel-${id}` },
@@ -407,8 +540,9 @@ async function openItem(id) {
   const o = { tab, panel, detail: null };
   open.set(id, o);
   activate(id);
+  if (id === LEARN) { renderLearn(panel); return; }
   try {
-    o.detail = await loadItem(id);
+    o.detail = await getDetail(id);
     renderPanel(id, o.detail);
   } catch {
     panel.replaceChildren(el('p', { class: 'error', text: T().itemFail }));
@@ -416,8 +550,8 @@ async function openItem(id) {
 }
 
 function route() {
-  const m = /^#\/(i|medicine)\/([a-z0-9_-]+)$/.exec(location.hash);
-  if (m) { openItem(m[2]); document.body.classList.remove('side-open'); $('#menu').setAttribute('aria-expanded', 'false'); }
+  const m = /^#\/(?:(i|medicine)\/([a-z0-9_-]+)|(learn))$/.exec(location.hash);
+  if (m) { openItem(m[2] || LEARN); document.body.classList.remove('side-open'); $('#menu').setAttribute('aria-expanded', 'false'); }
 }
 
 // ---------------------------------------------------------------------------
@@ -431,7 +565,7 @@ async function main() {
     uks = data.uk.map((m) => ({ ...m, kind: 'uk' }));
     for (const i of ings) {
       i._n = fold(`${i.n.tr} ${i.n.en} ${i.n.de} ${i.inn} ${i.atc}`);
-      i._k = fold(`${i._n} ${i.de.join(' ')} ${i.tr.join(' ')} ${i.ema.join(' ')}`);
+      i._k = fold(`${i._n} ${i.de.join(' ')} ${i.tr.join(' ')} ${i.ema.join(' ')} ${i.k?.de || ''} ${i.k?.tr || ''}`);
       byId.set(i.id, i);
     }
     for (const m of uks) { m._k = fold(`${m.name} ${m.ingredient || ''} ${m.use || ''}`); byId.set(m.id, m); }
@@ -439,6 +573,9 @@ async function main() {
     $('#status').textContent = T().loadFail;
     return;
   }
+  $('#learnBtn').hidden = false;
+  $('#commonOnly').checked = commonOnly;
+  $('#commonOnly').addEventListener('change', (e) => { commonOnly = e.target.checked; pref.set('common-only', commonOnly); renderTree(); });
   renderTree();
   renderWelcome();
   $('#lock').addEventListener('click', () => { forgetKey(); location.hash = ''; location.reload(); });

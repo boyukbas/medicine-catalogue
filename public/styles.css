@@ -111,6 +111,36 @@ a { color: var(--accent); }
 .short dd { margin: 0; }
 .ai-note { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 560px) { .short dl { grid-template-columns: 1fr; } .short dd { margin-bottom: 6px; } }
+.pro { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 0 0 22px; }
+.pro-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pro-head h3 { margin: 0; font-size: 17px; flex: 1; }
+.pro-switch { border: 1px solid var(--line); background: var(--bg); color: inherit; border-radius: 6px; padding: 3px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.pro-switch:hover { background: var(--hover); }
+.pro dl { margin: 0; display: grid; grid-template-columns: 190px 1fr; gap: 8px 16px; }
+.pro dt { font-weight: 600; color: var(--muted); font-size: 13.5px; }
+.pro dd { margin: 0; font-size: 14.5px; }
+.pro dt.key { color: var(--accent); }
+.pro dd.key { font-weight: 500; }
+@media (max-width: 560px) { .pro dl { grid-template-columns: 1fr; gap: 2px; } .pro dd { margin-bottom: 8px; } }
+/* study tools */
+.learn-btn { text-decoration: none; margin-left: 8px; }
+.common-only { display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.star { border: 0; background: none; color: #d97706; font-size: 22px; line-height: 1; cursor: pointer; vertical-align: middle; padding: 0 4px; }
+.star:hover { transform: scale(1.1); }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; background: var(--bg); }
+.card-q { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.card-name { font-size: 22px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.card-answer { margin: 0 0 12px; display: grid; grid-template-columns: 170px 1fr; gap: 6px 14px; }
+.card-answer dt { font-weight: 600; color: var(--muted); font-size: 13.5px; }
+.card-answer dd { margin: 0; }
+.card-btns { display: flex; gap: 8px; }
+.card-btns button, .block select { border: 1px solid var(--line); background: var(--panel); color: inherit; border-radius: 6px; padding: 6px 14px; font: inherit; cursor: pointer; }
+.card-btns button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+.mutual { margin: 6px 0; }
+.mutual dt { font-weight: 600; margin-top: 8px; }
+.mutual dd { margin: 2px 0 0; }
+.block h4 { margin: 16px 0 4px; font-size: 15px; }
+@media (max-width: 560px) { .card-answer { grid-template-columns: 1fr; gap: 2px; } }
 .block { margin: 22px 0; }
 .block h3 { font-size: 17px; margin: 0 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .small { font-size: 13px; margin: 4px 0 10px; }

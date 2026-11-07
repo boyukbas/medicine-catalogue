@@ -119,6 +119,12 @@ def main():
             fixed += 1
     if fixed:
         print(f'{fixed} summaries corrected by the review')
+    # Pharmacist monographs (German + Turkish), data/work/pro/pro-*.json
+    pro = {}
+    for f in sorted(glob.glob(D('work', 'pro', 'pro-*.json'))):
+        for p in load(f):
+            if isinstance(p.get('de'), dict):
+                pro[norm_inn(p['key'])] = {k: p[k] for k in ('de', 'tr') if isinstance(p.get(k), dict)}
 
     ing = {}  # inn -> record
 
@@ -184,9 +190,13 @@ def main():
         tr = tr_by_atc.get(atc, {}) if len(atc) == 7 else {}
         de_brands = sorted(r['de'].items(), key=lambda kv: (-len(kv[1]), kv[0]))
         cat = atc[0] if atc and atc[0] in ATC1 else 'X'
+        p = pro.get(inn) or {}
         ings.append({'id': iid, 'inn': inn, 'atc': atc, 'cat': cat, 'n': n,
-                     'de': [b for b, _ in de_brands], 'tr': sorted(tr), 'ema': [e['name'] for e in r['ema']], 'uk': r['uk']})
-        items[iid] = {'s': {k: s[k] for k in ('tr', 'en', 'de') if k in s} or None, 'rx': s.get('rx'),
+                     'de': [b for b, _ in de_brands], 'tr': sorted(tr), 'ema': [e['name'] for e in r['ema']], 'uk': r['uk'],
+                     # c: commonly used (sold under German brands) · k: drug class, for search and flashcards · p: has notes
+                     'c': bool(de_brands), 'p': bool(p),
+                     'k': {l: p[l].get('klasse', '') for l in ('de', 'tr') if isinstance(p.get(l), dict)}})
+        items[iid] = {'s': {k: s[k] for k in ('tr', 'en', 'de') if k in s} or None, 'rx': s.get('rx'), 'p': pro.get(inn),
                       'de': [{'b': b, 'rows': rows} for b, rows in de_brands], 'ema': r['ema'],
                       'tr': [{'b': b, 'h': h} for b, h in sorted(tr.items())]}
     for u in uk_index:
@@ -205,7 +215,7 @@ def main():
     with open(D('catalogue.json'), 'w', encoding='utf-8') as fh:
         json.dump({'index': index, 'items': items}, fh, ensure_ascii=False, separators=(',', ':'))
     with_s = sum(1 for i in ings if items[i['id']]['s'])
-    print(f"{len(ings)} ingredients ({with_s} with summaries), {index['counts']['deBrands']} German brands, "
+    print(f"{len(ings)} ingredients ({with_s} with summaries, {sum(1 for i in ings if items[i["id"]]["p"])} with pharmacist monographs), {index['counts']['deBrands']} German brands, "
           f"{sum(len(i['tr']) for i in ings)} Turkish brands, {sum(1 for u in uk_index if u['ing'])}/{len(uk_index)} UK pages linked")
     if unmapped:
         print('unmapped German ingredients:', dict(unmapped.most_common(15)))

@@ -22,6 +22,7 @@
       <button type="button" data-lang="en" lang="en">EN</button>
       <button type="button" data-lang="de" lang="de">DE</button>
     </div>
+    <a id="learnBtn" class="lock-btn learn-btn" href="#/learn" data-i18n="learn" hidden>Öğren</a>
     <button id="lock" class="lock-btn" type="button" data-i18n="lock" hidden>Kilitle</button>
   </header>
 
@@ -42,6 +43,7 @@
         <input id="filter" type="search" data-i18n-ph="filter" autocomplete="off" spellcheck="false">
         <button id="collapse" type="button" data-i18n="collapse">Tümünü daralt</button>
       </div>
+      <label class="common-only"><input id="commonOnly" type="checkbox" checked> <span data-i18n="commonOnly">Yalnızca sık kullanılanlar</span></label>
       <p id="status" class="status" aria-live="polite"></p>
       <nav id="tree" class="tree" role="tree"></nav>
     </aside>
