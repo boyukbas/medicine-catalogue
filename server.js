@@ -1,4 +1,4 @@
-// Medicine catalogue: a small local server for Özlem's 2012 medicine catalogue.
+// Medicine catalogue: a small local server for Özlem's medicine catalogue.
 // No dependencies. Listens on 127.0.0.1 only. Run: node server.js [port]
 'use strict';
 const http = require('node:http');
@@ -11,18 +11,17 @@ const HOST = '127.0.0.1';
 const ROOT = __dirname;
 
 // ---- data -------------------------------------------------------------------
-const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'medicines.json'), 'utf8'));
-const byId = new Map(data.medicines.map((m) => [m.id, m]));
-const indexJson = JSON.stringify({
-  categories: data.categories,
-  medicines: data.medicines.map(({ html, ...rest }) => rest),
-});
+// data/catalogue.json = { index, items: { id: detail } }, built by tools/build_catalogue.py
+const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'catalogue.json'), 'utf8'));
+const byId = new Map(Object.entries(data.items));
+const indexJson = JSON.stringify(data.index);
 const indexGz = zlib.gzipSync(indexJson);
 
 // ---- static files: a fixed allowlist, so no path ever comes from the request ---
 const STATIC = {
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+  '/i18n.js': ['i18n.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
   '/favicon.svg': ['favicon.svg', 'image/svg+xml'],
 };
@@ -78,11 +77,11 @@ const server = http.createServer((req, res) => {
       }
       return send(req, res, 200, indexJson, 'application/json; charset=utf-8', { 'Cache-Control': 'no-cache' });
     }
-    const m = /^\/api\/med\/([a-z0-9_\-]{1,120})$/.exec(p);
+    const m = /^\/api\/item\/([a-z0-9_\-]{1,120})$/.exec(p);
     if (m) {
       const med = byId.get(m[1]);
       if (!med) return json(req, res, 404, { error: 'not found' });
-      return json(req, res, 200, med, { 'Cache-Control': 'max-age=3600' });
+      return json(req, res, 200, med, { 'Cache-Control': 'no-cache' });
     }
     const file = STATIC[p];
     if (file) return send(req, res, 200, readStatic(file[0]), file[1], { 'Cache-Control': 'no-cache' });
@@ -95,6 +94,6 @@ const server = http.createServer((req, res) => {
 server.headersTimeout = 10_000;
 server.requestTimeout = 15_000;
 server.listen(PORT, HOST, () => {
-  console.log(`Medicine catalogue: ${data.medicines.length} medicines, ${data.categories.length} categories`);
+  console.log(`Medicine catalogue: ${data.index.ings.length} ingredients, ${data.index.uk.length} archive pages`);
   console.log(`Listening on http://${HOST}:${PORT}/`);
 });

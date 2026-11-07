@@ -11,7 +11,7 @@
 // gzipped and then encrypted. Medicine files are named by HMAC(id), so the file
 // names don't reveal which medicines are in the catalogue. The IV is derived from
 // the content (SIV-style), so unchanged content gives an unchanged file and git diffs
-// stay small. The plaintext data/medicines.json is never copied into docs/.
+// stay small. The plaintext data/catalogue.json is never copied into docs/.
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
@@ -52,24 +52,24 @@ function seal(name, obj) {
   return Buffer.concat([iv, c.update(plain), c.final(), c.getAuthTag()]);
 }
 
-const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'medicines.json'), 'utf8'));
+const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'catalogue.json'), 'utf8'));
 
 // Fresh output folder (it only ever holds generated files).
 fs.rmSync(path.join(OUT, 'data'), { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, 'data', 'm'), { recursive: true });
 
-for (const f of ['index.html', 'app.js', 'styles.css', 'favicon.svg']) fs.copyFileSync(path.join(ROOT, 'public', f), path.join(OUT, f));
+for (const f of ['index.html', 'app.js', 'i18n.js', 'styles.css', 'favicon.svg']) fs.copyFileSync(path.join(ROOT, 'public', f), path.join(OUT, f));
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 fs.writeFileSync(path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
 
-const index = { categories: data.categories, medicines: data.medicines.map(({ html, ...rest }) => rest) };
-fs.writeFileSync(path.join(OUT, 'data', 'index.bin'), seal('index', index));
+fs.writeFileSync(path.join(OUT, 'data', 'index.bin'), seal('index', data.index));
 let bytes = 0;
-for (const m of data.medicines) {
-  const name = hmac(`file:${m.id}`).toString('hex').slice(0, 24);
-  const buf = seal(name, m);
+const items = Object.entries(data.items);
+for (const [id, item] of items) {
+  const name = hmac(`file:${id}`).toString('hex').slice(0, 24);
+  const buf = seal(name, item);
   bytes += buf.length;
   fs.writeFileSync(path.join(OUT, 'data', 'm', `${name}.bin`), buf);
 }
 fs.writeFileSync(metaFile, JSON.stringify({ v: 1, kdf: 'PBKDF2-SHA256', iter: ITER, salt: salt.toString('base64') }, null, 2) + '\n');
-console.log(`Built docs/: ${data.medicines.length} encrypted medicine files (${(bytes / 2 ** 20).toFixed(1)} MB) + encrypted index.`);
+console.log(`Built docs/: ${items.length} encrypted item files (${(bytes / 2 ** 20).toFixed(1)} MB) + encrypted index.`);

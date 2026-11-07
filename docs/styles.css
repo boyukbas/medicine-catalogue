@@ -87,10 +87,49 @@ a { color: var(--accent); }
   .title { font-size: 22px; }
 }
 
+/* language switch */
+.langs { display: inline-flex; margin-left: auto; align-self: center; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.langs button { border: 0; background: var(--bg); color: var(--muted); font: inherit; font-size: 12px; font-weight: 600; padding: 4px 9px; cursor: pointer; }
+.langs button + button { border-left: 1px solid var(--line); }
+.langs button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
+.langs + .lock-btn { margin-left: 8px; }
+
+/* nested archive groups */
+.cat.sub { padding-left: 26px; font-weight: 500; }
+.tree ul ul li a { padding-left: 46px; }
+
+/* ingredient page */
+.aka { margin: -8px 0 10px; color: var(--muted); font-size: 14px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 10px; background: var(--hover); color: var(--muted); margin-bottom: 12px; }
+.badge.otc { background: var(--accent-soft); color: var(--accent); }
+.badge.rx { background: #fdecea; color: #b42318; }
+@media (prefers-color-scheme: dark) { .badge.rx { background: #3a1a17; color: #f97066; } }
+.short { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 14px 18px; margin: 6px 0 22px; }
+.short h3 { margin: 0 0 8px; font-size: 17px; }
+.short dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; }
+.short dt { font-weight: 600; }
+.short dd { margin: 0; }
+.ai-note { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 560px) { .short dl { grid-template-columns: 1fr; } .short dd { margin-bottom: 6px; } }
+.block { margin: 22px 0; }
+.block h3 { font-size: 17px; margin: 0 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.small { font-size: 13px; margin: 4px 0 10px; }
+.scroll { overflow-x: auto; }
+.grid { border-collapse: collapse; width: 100%; font-size: 14px; }
+.grid th, .grid td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+.grid th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.grid td.brand { font-weight: 600; white-space: nowrap; }
+.grid details summary { cursor: pointer; color: var(--accent); white-space: nowrap; }
+.pzn { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.links { padding-left: 20px; }
+.links li { margin: 5px 0; }
+.brands { line-height: 1.8; }
+.note { padding: 10px 14px; border-left: 3px solid #d97706; background: var(--hover); border-radius: 4px; font-size: 14px; }
+
 /* password gate (GitHub Pages build) */
 [hidden] { display: none !important; }
 body.locked .layout, body.locked .lock-btn { display: none !important; }
-.lock-btn { margin-left: auto; align-self: center; border: 1px solid var(--line); background: var(--bg); color: inherit; border-radius: 6px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.lock-btn { align-self: center; border: 1px solid var(--line); background: var(--bg); color: inherit; border-radius: 6px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
 .lock-btn:hover { background: var(--hover); }
 .gate { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
 .gate-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 8px; padding: 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }

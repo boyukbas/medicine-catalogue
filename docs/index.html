@@ -9,43 +9,50 @@
   <title>İlaç Kataloğu</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <script src="i18n.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body class="locked">
   <header class="top">
-    <button id="menu" class="icon-btn" aria-label="Kataloğu göster" aria-controls="side" aria-expanded="false">☰</button>
-    <h1>İlaç Kataloğu</h1>
-    <span class="sub">Özlem · 2012</span>
-    <button id="lock" class="lock-btn" type="button" hidden>Kilitle</button>
+    <button id="menu" class="icon-btn" data-i18n-label="menu" aria-controls="side" aria-expanded="false">☰</button>
+    <h1 data-i18n="title">İlaç Kataloğu</h1>
+    <span class="sub" data-i18n="sub">Özlem için</span>
+    <div class="langs" role="group" aria-label="Dil / Language / Sprache">
+      <button type="button" data-lang="tr" lang="tr">TR</button>
+      <button type="button" data-lang="en" lang="en">EN</button>
+      <button type="button" data-lang="de" lang="de">DE</button>
+    </div>
+    <button id="lock" class="lock-btn" type="button" data-i18n="lock" hidden>Kilitle</button>
   </header>
 
   <section id="gate" class="gate" hidden>
     <form id="gateForm" class="gate-card" autocomplete="on">
-      <h2>Bu katalog parola ile korunuyor</h2>
-      <label for="pw">Parola</label>
+      <h2 data-i18n="gateTitle">Bu katalog parola ile korunuyor</h2>
+      <label for="pw" data-i18n="password">Parola</label>
       <input id="pw" name="password" type="password" autocomplete="current-password" required>
-      <label class="remember"><input id="remember" type="checkbox"> Bu cihazda hatırla</label>
-      <button id="unlock" type="submit">Aç</button>
+      <label class="remember"><input id="remember" type="checkbox"> <span data-i18n="remember">Bu cihazda hatırla</span></label>
+      <button id="unlock" type="submit" data-i18n="open">Aç</button>
       <p id="gateMsg" class="gate-msg" aria-live="polite"></p>
     </form>
   </section>
 
   <div class="layout">
-    <aside id="side" class="side" aria-label="Katalog">
+    <aside id="side" class="side">
       <div class="tools">
-        <input id="filter" type="search" placeholder="Filtre: ilaç, etken madde, kullanım…" autocomplete="off" spellcheck="false" aria-label="Filtre">
-        <button id="collapse" type="button" title="Tümünü daralt">Tümünü daralt</button>
+        <input id="filter" type="search" data-i18n-ph="filter" autocomplete="off" spellcheck="false">
+        <button id="collapse" type="button" data-i18n="collapse">Tümünü daralt</button>
       </div>
-      <p id="status" class="status" aria-live="polite">Yükleniyor…</p>
-      <nav id="tree" class="tree" role="tree" aria-label="İlaç Kataloğu"></nav>
+      <p id="status" class="status" aria-live="polite"></p>
+      <nav id="tree" class="tree" role="tree"></nav>
     </aside>
     <main class="main">
-      <div id="tabs" class="tabs" role="tablist" aria-label="Açık ilaçlar"></div>
+      <div id="tabs" class="tabs" role="tablist"></div>
       <div id="panels" class="panels">
         <section id="welcome" class="welcome">
-          <h2>Hoş geldiniz</h2>
-          <p>Soldaki katalogdan bir kategori açın ya da filtreye bir ilaç adı, etken madde veya kullanım alanı yazın.</p>
-          <p class="muted">Katalogda <strong id="medCount">…</strong> ilaç, <strong id="catCount">…</strong> kategori var. İçerik 2012'de derlendi ve İngilizcedir; güncel tıbbi bilgi yerine geçmez.</p>
+          <h2 data-i18n="welcomeTitle">Hoş geldiniz</h2>
+          <p data-i18n="welcome1"></p>
+          <p class="muted" data-i18n="welcome2"></p>
+          <p class="muted" id="sourceDates"></p>
         </section>
       </div>
     </main>

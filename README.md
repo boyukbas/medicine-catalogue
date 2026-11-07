@@ -1,6 +1,6 @@
 # Medicine Catalogue
 
-A password-protected rewrite of Özlem's 2012 medicine catalogue (site UI in Turkish, content in English). It has 2,310 medicines in 28 categories.
+A password-protected medicine catalogue for Özlem, in Turkish, English and German. It focuses on medicines available in Germany: about 1,400 active ingredients with their German brands, official EU leaflets, Turkish brands, and the 2012 catalogue (2,310 UK medicines) as an archive.
 
 The original was an ASP.NET WebForms + Ext.NET 1.3 site with a tree on the left and medicine pages opening in tabs. The rewrite keeps that layout and drops the old platform.
 
@@ -35,16 +35,25 @@ git add -A && git commit -m "Rebuild site" && git push
 - `data/medicines.json` (the plaintext) is git-ignored and never published.
 
 ## Where the data comes from
-`data/medicines.json` is built from the generated pages of the deployed 2012 site:
-```
-python -I tools/extract.py "D:\code\old\ozlem-site-2012\deployed-site-2012-09\SAYFA\ILACLAR" data\medicines.json
-```
-The extractor works like this:
-- It reads the `<Content>` part of each `.aspx` page.
-- It takes Main use, Active ingredient and Manufacturer from the summary table.
-- It reduces the body to a small set of tags (headings, paragraphs, lists, tables, bold and italic) with every attribute removed.
-- Links to other medicines become internal links. All other links are reduced to plain text.
-- Category folder names are translated to Turkish.
+One page per active ingredient available in Germany, in Turkish, English and German:
+
+| Source | What it gives | File in `data/sources/` (git-ignored) |
+|---|---|---|
+| BfArM Festbetragsarzneimittel list (bfarm.de, updated monthly) | German brand names, strengths, dosage forms and PZN numbers | `bfarm-festbetraege-YYYY-MM-DD.pdf` |
+| EMA medicines report (ema.europa.eu, updated daily) | Medicines authorised EU-wide, which are valid in Germany, with links to the official leaflet (German and English PDF) | `ema-medicines-report.xlsx` |
+| TİTCK licensed medicines list (titck.gov.tr, updated weekly) | Turkish brands (e.g. Parol), joined by ATC code | `titck-ruhsatli-urunler-YYYY-MM-DD.xlsx` |
+| The 2012 site (`D:\code\old\ozlem-site-2012`) | The old UK pages, kept as an English archive and linked from the ingredient pages | `data/medicines.json`, from `tools/extract.py` |
+
+Steps:
+1. **Read the source files:** `.venv\Scripts\python tools\sources.py` turns them into JSON.
+2. **Map ingredient names:** German and UK names are mapped to INN + ATC code in `data/work/map-*.json`. This was done once with an AI model and can be corrected by hand.
+3. **Write the short patient summaries:** these are in `data/work/summaries/*.json` (TR/EN/DE: what it's for, how it's used, common side effects, the key warning, and prescription status in Germany). They were written with AI, and the site says so. `tools/build_catalogue.py` lists the ingredients that still need one in `data/work/summaries-todo.json`.
+4. **Build the catalogue:** `.venv\Scripts\python tools\build_catalogue.py` writes `data/catalogue.json`.
+5. **Build the site:** `node tools/build-site.js` encrypts everything into `docs/`.
+
+German national brands have no free leaflet download, so their pages show the PZN numbers (the leaflet is in the pack and can be looked up by PZN). EU-wide medicines link to EMA's official German and English leaflets.
+
+To update, download the newest files to `data/sources/` and repeat steps 1, 4 and 5. New ingredients need steps 2 and 3 too.
 
 ## What changed from 2012, and why
 | 2012 | Now |

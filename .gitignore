@@ -3,3 +3,4 @@
 # the site password
 /.site-password
 node_modules/
+/.venv/
