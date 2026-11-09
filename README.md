@@ -57,14 +57,6 @@ German national brands have no free leaflet download, so their pages show the PZ
 
 To update, download the newest files to `data/sources/` and repeat steps 1, 4 and 5. New ingredients need steps 2 and 3 too.
 
-## What changed from 2012, and why
-| 2012 | Now |
-|---|---|
-| ASP.NET WebForms, Ext.NET 1.3, IIS. All are unsupported with known vulnerabilities (ViewState, old jQuery/ExtJS) | One dependency-free Node file plus static HTML, CSS and JS |
-| Google Analytics (`UA-…`) on every page | No tracking and no third-party requests |
-| 2,310 × 3 generated `.aspx/.cs` files | One JSON file, served as a small index plus per-medicine content |
-| Raw HTML pages inside iframes | Cleaned content rendered through an allowlist |
-
 ## Security
 - The server listens on `127.0.0.1` only. It rejects other `Host` headers, which protects against DNS rebinding.
 - Only GET and HEAD requests are accepted.
